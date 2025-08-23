@@ -1,0 +1,134 @@
+import config from "../conf/config";
+import { Client, ID, Databases, Storage, Query } from "appwrite";
+
+export class Service {
+  client = new Client();
+  databases;
+  bucket;
+
+  constructor() {
+    this.client
+      .setEndpoint(config.appWriteUrl)
+      .setProject(config.appWriteProjectId);
+    this.databases = new Databases(this.client);
+    this.bucket = new Storage(this.client);
+  }
+
+  async createPost({ title, slug, content, featuredImage, status, userId }) {
+    try {
+      return await this.databases.createDocument(
+        config.appWriteDatabaseId,
+        config.appWriteCollectionId,
+        slug,
+        {
+          title,
+          content,
+          featuredImage,
+          status,
+          userId,
+        }
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async updatePost(slug, { title, content, featuredImage, status }) {
+    try {
+      return await this.databases.updateDocument(
+        config.appWriteDatabaseId,
+        config.appWriteCollectionId,
+        slug,
+        {
+          title,
+          content,
+          featuredImage,
+          status,
+        }
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  async deletePost(slug) {
+    try {
+      await this.databases.deleteDocument(
+        config.appWriteDatabaseId,
+        config.appWriteCollectionId,
+        slug
+      );
+
+      return true;
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  }
+
+  async getPost(slug) {
+    try {
+      const post = await this.databases.getDocument(
+        config.appWriteDatabaseId,
+        config.appWriteCollectionId,
+        slug
+      );
+      post.slug = slug;
+      return post;
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  }
+
+  async getAllPosts(queries = [Query.equal("status", "active")]) {
+    try {
+      const posts = await this.databases.listDocuments(
+        config.appWriteDatabaseId,
+        config.appWriteCollectionId,
+        queries
+      );
+      return posts;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // File upload service
+  async uploadFile(file) {
+    try {
+      return await this.bucket.createFile(
+        config.appWriteBucketId,
+        ID.unique(),
+        file
+      );
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  }
+
+  async deleteFile(fileId) {
+    try {
+      await this.bucket.deleteFile(config.appWriteBucketId, fileId);
+
+      return true;
+    } catch (error) {
+      console.log(error);
+      return false;
+    }
+  }
+
+  getFilePreview(fileId) {
+    try {
+      const image = this.bucket.getFileView(config.appWriteBucketId, fileId);
+      return image;
+    } catch (error) {
+      console.log(error);
+    }
+  }
+}
+
+const service = new Service();
+
+export default service;
